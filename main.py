@@ -1,28 +1,38 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import threading
-import database 
+import database
+from security import validate_security_key
 
 app = Flask(__name__)
 
-@app.route('/', methods=['POST'])
+
+@app.route("/", methods=["POST"])
 def handle_request():
     print("Request received.")
-    
+    provided_key = request.headers.get("Authorization")
+    validation_result = validate_security_key(provided_key)
+
+    if validation_result != 1:
+        print("Invalid Key: 403")
+        # return jsonify({"status": validation_result}), 403
+
     thread = threading.Thread(target=process_request, args=(request.json,))
     thread.start()
 
     return "New thread create to process requrest!", 202
 
+
 def process_request(data):
     print("Processing request in new thread")
     print(f"{data}")
-    if 'type' in data:
-        if data['type'].startswith('database'):
+    if "type" in data:
+        if data["type"].startswith("database"):
             database.handle_database_task(data)
         else:
             print("Unknown type in request.")
     else:
         print("Invalid request format: 'type' field missing.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(port=3672)

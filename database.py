@@ -2,8 +2,10 @@ import mariadb
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-from cryptography.fernet import Fernet
+
+# from cryptography.fernet import Fernet
 import json
+import bcrypt
 
 load_dotenv()
 
@@ -62,10 +64,12 @@ def database_acc_register(data, connection):
 
     # Encrypt the password
     # encrypted_password = fernet.encrypt(password.encode()).decode()
-    encrypted_password = "hash"
+    hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
     account_data = {
         "username": username,
-        "password": encrypted_password,
+        "password": hashed_password,
         "date_created": datetime.now().isoformat(),
         "first_name": data.get("first_name", ""),
         "last_name": data.get("last_name", ""),
@@ -118,7 +122,7 @@ def database_acc_login(data, connection):
         if result:
             print(f"this is the result: {result}")
             stored_password = result[0].strip('"')
-            if stored_password == password:
+            if bcrypt.checkpw(password.encode(), stored_password.encode()):
                 return "1"
             else:
                 return "0_db_0002"
@@ -226,3 +230,54 @@ def insert_post(
         return f"0_db_{e.errno}"  # Database error
     except Exception as e:
         return "0_con_1001"  # Generic error for other exceptions
+
+
+def remove_match(cursor, match_id):
+    try:
+        cursor.execute("DELETE FROM matches WHERE id = %s", (match_id,))
+        if cursor.rowcount == 0:
+            return "0_db_404"  # Match ID not found
+        return 1
+    except mariadb.Error as e:
+        return f"0_db_{e.errno}"
+
+
+def update_match_for_user_1(cursor, match_id):
+
+    try:
+        query = "UPDATE matches SET data = JSON_SET(data, '$.users_accepted[0]', TRUE) WHERE id = %s"
+        cursor.execute(query, (match_id,))
+        if cursor.rowcount == 0:
+            return "0_db_404"  # Match not found
+        return 1
+    except mariadb.Error as e:
+        return f"0_db_{e.errno}"
+
+
+def create_reservation(cursor, user_1, user_2, reservation_id, match_data):
+
+    try:
+        reservation_data = {
+            "id": reservation_id,
+            "opened": "true",
+            "accounts": [user_1, user_2],
+            "users_accepted": [user_1, user_2],
+        }
+        cursor.execute(
+            "INSERT INTO reservations (user_1, user_2, data, created_at) VALUES (%s, %s, %s, NOW())",
+            (user_1, user_2, json.dumps(reservation_data)),
+        )
+        return 1
+    except mariadb.Error as e:
+        return f"0_db_{e.errno}"
+
+
+def remove_reservation(cursor, reservation_id):
+
+    try:
+        cursor.execute("DELETE FROM reservations WHERE id = %s", (reservation_id,))
+        if cursor.rowcount == 0:
+            return "0_db_404"  # Reservation not found
+        return 1
+    except mariadb.Error as e:
+        return f"0_db_{e.errno}"
