@@ -1,5 +1,6 @@
 from flask import Flask, request
 import threading
+import database 
 
 app = Flask(__name__)
 
@@ -13,7 +14,15 @@ def handle_request():
     return "New thread create to process requrest!", 202
 
 def process_request(data):
-    print(f"Processing request in new thread")
+    print("Processing request in new thread")
+    print(f"{data}")
+    if 'type' in data:
+        if data['type'] == 'database':
+            database.handle_database_task(data)
+        else:
+            print("Unknown type in request.")
+    else:
+        print("Invalid request format: 'type' field missing.")
 
 if __name__ == '__main__':
     app.run(port=3672)
