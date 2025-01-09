@@ -1,9 +1,8 @@
 import mariadb
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# from cryptography.fernet import Fernet
 import json
 import bcrypt
 
@@ -62,8 +61,6 @@ def database_acc_register(data, connection):
     if not all(char.isalnum() or char in "!@#$%^&*" for char in password):
         return "0_con_0002"
 
-    # Encrypt the password
-    # encrypted_password = fernet.encrypt(password.encode()).decode()
     hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -156,9 +153,9 @@ def insert_match(id, user_1, user_2, opened, accounts, users_accepted, connectio
         connection.commit()
         return 1  # Success
     except mariadb.Error as e:
-        return f"0_db_{e.errno}"  # Database error
+        return f"0_db_{e.errno}"
     except Exception as e:
-        return "0_con_1001"  # Generic error for other exceptions
+        return "0_con_1001"
 
 
 def insert_reservation(
@@ -184,9 +181,9 @@ def insert_reservation(
         connection.commit()
         return 1  # Success
     except mariadb.Error as e:
-        return f"0_db_{e.errno}"  # Database error
+        return f"0_db_{e.errno}"
     except Exception as e:
-        return "0_con_1001"  # Generic error for other exceptions
+        return "0_con_1001"
 
 
 def insert_post(
@@ -248,7 +245,7 @@ def update_match_for_user_1(cursor, match_id):
         query = "UPDATE matches SET data = JSON_SET(data, '$.users_accepted[0]', TRUE) WHERE id = %s"
         cursor.execute(query, (match_id,))
         if cursor.rowcount == 0:
-            return "0_db_404"  # Match not found
+            return "0_db_404"
         return 1
     except mariadb.Error as e:
         return f"0_db_{e.errno}"
@@ -277,7 +274,49 @@ def remove_reservation(cursor, reservation_id):
     try:
         cursor.execute("DELETE FROM reservations WHERE id = %s", (reservation_id,))
         if cursor.rowcount == 0:
-            return "0_db_404"  # Reservation not found
+            return "0_db_404"
         return 1
     except mariadb.Error as e:
         return f"0_db_{e.errno}"
+
+
+def get_reservations_to_notify(cursor):
+
+    try:
+        now = datetime.now()
+        one_day_later = (now + timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+        today = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        query = """
+            SELECT id, data
+            FROM reservations
+            WHERE JSON_EXTRACT(data, '$.opened') = 'true'
+            AND JSON_EXTRACT(data, '$.date') <= ?
+            AND JSON_EXTRACT(data, '$.date') > ?
+        """
+        cursor.execute(query, (one_day_later, today))
+        return cursor.fetchall()
+    except mariadb.Error as e:
+        print(f"Error fetching reservations: {e}")
+        return []
+
+
+def get_matches_to_notify(cursor):
+
+    try:
+        now = datetime.now()
+        three_days_later = (now + timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+        today = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        query = """
+            SELECT id, data
+            FROM matches
+            WHERE JSON_LENGTH(JSON_EXTRACT(data, '$.users_accepted')) = 1
+            AND JSON_EXTRACT(data, '$.date') <= ?
+            AND JSON_EXTRACT(data, '$.date') > ?
+        """
+        cursor.execute(query, (three_days_later, today))
+        return cursor.fetchall()
+    except mariadb.Error as e:
+        print(f"Error fetching matches: {e}")
+        return []

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import threading
 import database
 from security import validate_security_key
+from ding_notification import check_reservations_and_matches
 
 app = Flask(__name__)
 
@@ -35,4 +36,9 @@ def process_request(data):
 
 
 if __name__ == "__main__":
+    print("*****Server is running.*****")
+    notification_thread = threading.Thread(
+        target=check_reservations_and_matches, daemon=True
+    )
+    notification_thread.start()
     app.run(port=3672)
