@@ -73,7 +73,11 @@ def database_acc_register(data, connection):
         "email": data.get("email", ""),
         "school": data.get("school", ""),
         "demo": data.get("demo", ""),
-        "groups": {},
+        "groups": {"company_ding": {"position": "", "matches": [], "reservations": []}},
+        "notifications": "",
+        "rating": "",
+        "ratings_total": "",
+        "rating_waiting": "",
     }
 
     try:
@@ -125,3 +129,100 @@ def database_acc_login(data, connection):
         return f"0_db_{str(e.errno)}"
     finally:
         cursor.close()
+
+
+def insert_match(id, user_1, user_2, opened, accounts, users_accepted, connection):
+    try:
+        data = json.dumps(
+            {
+                "id": id,
+                "opened": opened,
+                "accounts": accounts,
+                "users_accepted": users_accepted,
+            }
+        )
+
+        query = """
+        INSERT INTO matches (id, user_1, user_2, data, created_at)
+        VALUES (?, ?, ?, ?, NOW())
+        """
+
+        cursor = connection.cursor()
+        cursor.execute(query, (id, user_1, user_2, data))
+        connection.commit()
+        return 1  # Success
+    except mariadb.Error as e:
+        return f"0_db_{e.errno}"  # Database error
+    except Exception as e:
+        return "0_con_1001"  # Generic error for other exceptions
+
+
+def insert_reservation(
+    id, user_1, user_2, opened, accounts, users_accepted, connection
+):
+    try:
+        data = json.dumps(
+            {
+                "id": id,
+                "opened": opened,
+                "accounts": accounts,
+                "users_accepted": users_accepted,
+            }
+        )
+
+        query = """
+        INSERT INTO reservations (id, user_1, user_2, data, created_at)
+        VALUES (?, ?, ?, ?, NOW())
+        """
+
+        cursor = connection.cursor()
+        cursor.execute(query, (id, user_1, user_2, data))
+        connection.commit()
+        return 1  # Success
+    except mariadb.Error as e:
+        return f"0_db_{e.errno}"  # Database error
+    except Exception as e:
+        return "0_con_1001"  # Generic error for other exceptions
+
+
+def insert_post(
+    id,
+    user_1,
+    account,
+    date,
+    title,
+    body,
+    location_pickup,
+    location_pickup_coords,
+    location_dropoff,
+    location_dropoff_coords,
+    connection,
+):
+    try:
+        data = json.dumps(
+            {
+                "id": id,
+                "account": account,
+                "date": date,
+                "title": title,
+                "body": body,
+                "location_pickup": location_pickup,
+                "location_pickup_coords": location_pickup_coords,
+                "location_dropoff": location_dropoff,
+                "location_dropoff_coords": location_dropoff_coords,
+            }
+        )
+
+        query = """
+        INSERT INTO posts (id, user_1, data, created_at)
+        VALUES (?, ?, ?, NOW())
+        """
+
+        cursor = connection.cursor()
+        cursor.execute(query, (id, user_1, data))
+        connection.commit()
+        return 1  # Success
+    except mariadb.Error as e:
+        return f"0_db_{e.errno}"  # Database error
+    except Exception as e:
+        return "0_con_1001"  # Generic error for other exceptions
