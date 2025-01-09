@@ -1,0 +1,1 @@
+SECURITY_KEY = "a1uso2hmn9083qhuiosvniuw094nesiotyh0934hLSDFKJOF30rusfZF"

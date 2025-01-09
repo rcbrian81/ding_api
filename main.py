@@ -17,7 +17,7 @@ def process_request(data):
     print("Processing request in new thread")
     print(f"{data}")
     if 'type' in data:
-        if data['type'] == 'database':
+        if data['type'].startswith('database'):
             database.handle_database_task(data)
         else:
             print("Unknown type in request.")
