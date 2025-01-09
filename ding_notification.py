@@ -8,7 +8,9 @@ from database import (
 
 
 def check_reservations_and_matches():
-    print("Checking Reservations & Matches")
+    print(
+        "Notification: Checking Reservations & Matches every minute on seprate thread."
+    )
     while True:
         connection = connect_to_database()
         if not connection:
